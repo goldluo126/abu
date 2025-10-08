@@ -157,9 +157,18 @@ class ArticleListParser(HTMLParser):
         for href, title_and_date in self._articles:
             if "\u0000" in title_and_date:
                 title, date = title_and_date.split("\u0000", 1)
-                extracted.append((href, title.strip(), date.strip()))
+                date = date.strip()
+                match = DATE_PATTERN.search(date)
+                if match:
+                    extracted.append((href, title.strip(), match.group(0)))
+                # Entries without a valid date are ignored to avoid crawling
+                # unrelated anchors such as navigation links.
             else:
-                extracted.append((href, title_and_date.strip(), None))
+                # Without a publication date the entry likely does not belong
+                # to the article listing (e.g. header/footer links).  Dropping
+                # these prevents emitting bogus requests for arbitrary site
+                # anchors.
+                continue
         return extracted
 
 
